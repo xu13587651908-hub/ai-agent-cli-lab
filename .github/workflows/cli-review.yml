@@ -1,0 +1,19 @@
+name: CLI Review
+on:
+    pull_request:
+        types:
+            - opened
+            - synchronize
+jobs:
+    review:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Check Node version
+              run: node --version
+
+
+
+
+
