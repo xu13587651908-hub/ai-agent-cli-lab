@@ -1,7 +1,10 @@
 import os
 import subprocess
+import json
+
 import requests
 from openai import OpenAI
+
 
 client = OpenAI(
     api_key=os.environ["DEEPSEEK_API_KEY"],
@@ -29,10 +32,13 @@ response = client.chat.completions.create(
 
 review = response.choices[0].message.content
 
-owner = "xu13587651908-hub"
-repo = "ai-agent-cli-lab"
-pull_number = 1
+repository = os.environ["GITHUB_REPOSITORY"]
+owner, repo = repository.split("/", 1)
+with open(os.environ["GITHUB_EVENT_PATH"], "r", encoding="utf-8") as f:
+    event = json.load(f)
+pull_number = event["pull_request"]["number"]
 
+print(owner, repo, pull_number)
 print(review)
 
 token = os.environ["GITHUB_TOKEN"]
