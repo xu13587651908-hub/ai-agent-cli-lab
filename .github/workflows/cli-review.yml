@@ -1,19 +1,40 @@
 name: CLI Review
+
 on:
-    pull_request:
-        types:
-            - opened
-            - synchronize
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-    review:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-            - name: Check Node version
-              run: node --version
+  review:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Check Node version
+        run: node --version
 
+      - name: Check README
+        run: |
+          test -s README.md
+          echo "README check passed"
 
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai requests
 
+      - name: Run AI Review
+        run: python review.py
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
