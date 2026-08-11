@@ -21,3 +21,9 @@ jobs:
         run: |
           test -s README.md
           echo "README check passed"
+
+      - name: Show GitHub Token
+        run: |
+          echo "Token exists"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
