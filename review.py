@@ -11,8 +11,15 @@ client = OpenAI(
     base_url="https://api.deepseek.com"
 )
 
+base_ref = os.environ["GITHUB_BASE_REF"]
+
+subprocess.run(
+    ["git", "fetch", "origin", base_ref],
+    check=True
+)
+
 diff = subprocess.check_output(
-    ["git", "diff", "HEAD~1", "HEAD"],
+    ["git", "diff", f"origin/{base_ref}...HEAD"],
     text=True
 )
 
@@ -38,7 +45,6 @@ with open(os.environ["GITHUB_EVENT_PATH"], "r", encoding="utf-8") as f:
     event = json.load(f)
 pull_number = event["pull_request"]["number"]
 
-print(owner, repo, pull_number)
 print(review)
 
 token = os.environ["GITHUB_TOKEN"]
