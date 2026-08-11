@@ -6,6 +6,10 @@ on:
       - opened
       - synchronize
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -22,8 +26,13 @@ jobs:
           test -s README.md
           echo "README check passed"
 
-      - name: Show GitHub Token
+      - name: Install Python packages
         run: |
-          echo "Token exists"
+          python -m pip install --upgrade pip
+          pip install openai requests
+
+      - name: Run AI Review
+        run: python review.py
         env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
