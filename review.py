@@ -5,61 +5,83 @@ import json
 import requests
 from openai import OpenAI
 
+with open("prompts/review.md", "r", encoding="utf-8") as f:
+    system_prompt = f.read()
 
 client = OpenAI(
     api_key=os.environ["DEEPSEEK_API_KEY"],
     base_url="https://api.deepseek.com"
 )
 
-base_ref = os.environ["GITHUB_BASE_REF"]
+def get_git_diff():
+    base_ref = os.environ["GITHUB_BASE_REF"]
 
-subprocess.run(
-    ["git", "fetch", "origin", base_ref],
-    check=True
-)
+    subprocess.run(
+        ["git", "fetch", "origin", base_ref],
+        check=True
+    )
 
-diff = subprocess.check_output(
-    ["git", "diff", f"origin/{base_ref}...HEAD"],
-    text=True
-)
+    return subprocess.check_output(
+        ["git", "diff", f"origin/{base_ref}...HEAD"],
+        text=True
+    )
 
-response = client.chat.completions.create(
-    model="deepseek-chat",
-    messages=[
-        {
-            "role": "system",
-            "content": "你是一名经验丰富的软件工程师，请对下面的 Git diff 进行 Code Review，指出问题并给出改进建议。"
-        },
-        {
-            "role": "user",
-            "content": diff
-        }
-    ]
-)
+def get_ai_review(diff):
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": diff
+            }
+        ]
+    )
 
-review = response.choices[0].message.content
+    return response.choices[0].message.content
 
-repository = os.environ["GITHUB_REPOSITORY"]
-owner, repo = repository.split("/", 1)
-with open(os.environ["GITHUB_EVENT_PATH"], "r", encoding="utf-8") as f:
-    event = json.load(f)
-pull_number = event["pull_request"]["number"]
 
-print(review)
+def post_comment(review):
+    repository = os.environ["GITHUB_REPOSITORY"]
+    owner, repo = repository.split("/", 1)
+    with open(os.environ["GITHUB_EVENT_PATH"], "r", encoding="utf-8") as f:
+        event = json.load(f)
+    pull_number = event["pull_request"]["number"]
 
-token = os.environ["GITHUB_TOKEN"]
+    print(review[:500])
 
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Accept": "application/vnd.github+json"
-}
+    token = os.environ["GITHUB_TOKEN"]
 
-url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pull_number}/comments"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
 
-result = requests.post(
-    url,
-    headers=headers,
-    json={"body": review}
-)
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pull_number}/comments"
 
-print(result.status_code)
+    result = requests.post(
+        url,
+        headers=headers,
+        json={"body": review}
+    )
+
+    if result.status_code == 201:
+        print("✅ Review comment posted successfully")
+    else:
+        print(f"❌ Failed: {result.status_code}")
+        print(result.text)
+
+
+
+def main():
+    diff = get_git_diff()
+
+    review = get_ai_review(diff)
+
+    post_comment(review)
+
+if __name__ == "__main__":
+    main()
